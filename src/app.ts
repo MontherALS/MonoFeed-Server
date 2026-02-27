@@ -5,6 +5,7 @@ import profileRouter from "./routers/profileRouter";
 import categoryRouter from "./routers/categoryRouter";
 import errorHandler from "./middleware/error-handler";
 import cors from "cors";
+import helmet from "helmet";
 import cookieParser from "cookie-parser";
 import { globalLimiter } from "./limiters/limiter";
 
@@ -12,6 +13,7 @@ const PORT = process.env.PORT || 5000;
 const CLIENT_URL = process.env.CLIENT_URL || "http://localhost:3000";
 const app = express();
 
+app.use(helmet());
 app.use(globalLimiter);
 app.use(
   cors({
