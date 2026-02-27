@@ -1,0 +1,70 @@
+generator client {
+  provider = "prisma-client-js"
+  output   = "../src/generated/prisma"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+model User {
+  id              String    @id @default(uuid())
+  email           String    @unique
+  password        String
+  user_name       String
+  createdAt       DateTime  @default(now())
+  isAdmin         Boolean   @default(false)
+  updatedAt       DateTime  @updatedAt
+  about           String?
+  avatar          String?
+  isPrivate       Boolean?  @default(false)
+  avatar_key      String?
+  comments        Comment[] @relation("CommentedBy")
+  following       Follow[]  @relation("FollowingTo")
+  followers       Follow[]  @relation("FollowingBy")
+  Uploaded_Posts  Post[]    @relation("UploadedPosts")
+  favorited_posts Post[]    @relation("LikedPosts")
+}
+
+model Follow {
+  followerId  String
+  followingId String
+  following   User   @relation("FollowingTo", fields: [followerId], references: [id])
+  follower    User   @relation("FollowingBy", fields: [followingId], references: [id])
+
+  @@id([followerId, followingId])
+}
+
+model Post {
+  id           String     @id @default(uuid())
+  createdAt    DateTime   @default(now())
+  updatedAt    DateTime   @updatedAt
+  authorId     String
+  key          String
+  post_title   String
+  post_url     String?
+  description  String?
+  comments     Comment[]  @relation("CommentedOn")
+  author       User       @relation("UploadedPosts", fields: [authorId], references: [id])
+  category     Category[] @relation("CategoryPosts")
+  favorited_by User[]     @relation("LikedPosts")
+
+  @@unique([id, authorId])
+}
+
+model Category {
+  id            String @id @default(uuid())
+  category_name String @unique
+  posts         Post[] @relation("CategoryPosts")
+}
+
+model Comment {
+  id              String   @id @default(uuid())
+  postId          String
+  authorId        String
+  comment_content String
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+  comment_by      User     @relation("CommentedBy", fields: [authorId], references: [id])
+  commented_on    Post     @relation("CommentedOn", fields: [postId], references: [id])
+}
