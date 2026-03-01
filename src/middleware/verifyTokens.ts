@@ -4,14 +4,11 @@ import { UserJWT } from "../types/UserJwt";
 
 export const verifyToken = (req: Request, res: Response, next: NextFunction) => {
   try {
-    const authorization = req.headers.authorization;
-    if (!authorization) throw { message: "Authorization header missing", statusCode: 401 }; 
-    const accsessToken = req.cookies.accessToken;
-    if (!authorization.startsWith("Bearer ")) throw { message: "Invalid authorization header", statusCode: 401 };
+   
+    const accessToken = req.cookies.accessToken;
+    if (!accessToken) throw { message: "Invalid access token", statusCode: 401 };
 
-    const token = authorization.split(" ")[1];
-
-    const decoded = jwt.verify(token, process.env.ACCESS_TOKEN_SECRET as string) as UserJWT;
+    const decoded = jwt.verify(accessToken, process.env.ACCESS_TOKEN_SECRET as string) as UserJWT;
 
     req.user = { id: decoded.id };
 

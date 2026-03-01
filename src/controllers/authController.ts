@@ -7,6 +7,7 @@ import { findUniqueUser, createUser } from "../service/authService";
 import { SignUpValidator } from "../validators/signup.validator";
 import { LogInValidator } from "../validators/login.validator";
 import { UserJWT } from "../types/UserJwt";
+import { prisma } from "../lib/prisma";
 
 export const signupController = async (req: Request<{}, {}, SignUpRequestType>, res: Response, next: NextFunction) => {
   try {
@@ -15,7 +16,7 @@ export const signupController = async (req: Request<{}, {}, SignUpRequestType>, 
     const isExsits = await findUniqueUser(email);
     if (isExsits) throw { message: "Email is Already used try to log in .", statusCode: 400 };
 
-    const validationResult = SignUpValidator({ email, password, confirmPassword, user_name }); //TODO : CONTUNE HERE AND ADD MESSAGE FOR FRONTEND
+    const validationResult = SignUpValidator({ email, password, confirmPassword, user_name });
     if (validationResult !== true) throw { message: validationResult, statusCode: 400 };
 
     const hashedPassword = await hash(password, 10);
@@ -51,12 +52,11 @@ export const loginController = async (req: Request<{}, {}, LogInDataType>, res: 
     const token = jwt.sign({ id: user.id }, process.env.ACCESS_TOKEN_SECRET as string, { expiresIn: "15m" });
     const refresh_token = jwt.sign({ id: user.id }, process.env.REFRESH_TOKEN_SECRET as string, { expiresIn: "14d" });
 
-    //TODO handle this in frontend
     res.cookie("accessToken", token, {
       httpOnly: true,
       secure: false,
       sameSite: "lax",
-      maxAge: 15 * 60 * 1000, //15min
+      maxAge: 60 * 1000, //15min
     });
     res.cookie("refreshToken", refresh_token, {
       httpOnly: true,
@@ -64,7 +64,6 @@ export const loginController = async (req: Request<{}, {}, LogInDataType>, res: 
       sameSite: "lax",
       maxAge: 14 * 24 * 60 * 60 * 1000, //14d
     });
-    
     const userData = {
       id: user.id,
       user_name: user.user_name,
@@ -74,6 +73,26 @@ export const loginController = async (req: Request<{}, {}, LogInDataType>, res: 
     } as LogInUserDataType;
 
     res.status(200).json({ message: "Logged in succes ", userData ,token});
+  } catch (err) {
+    next(err);
+  }
+};
+
+export const logoutController = (req: Request, res: Response, next: NextFunction) => {
+  try {
+    res.clearCookie("accessToken",{
+  httpOnly: true,
+  secure: false,
+  sameSite: "lax" as const,
+},
+);
+    res.clearCookie("refreshToken",{
+  httpOnly: true,
+  secure: false,
+  sameSite: "lax" as const,
+});
+
+    return res.status(200).json({ message: "Logged out successfully" });
   } catch (err) {
     next(err);
   }
@@ -89,11 +108,34 @@ export const refreshTokenController = (req: Request, res: Response, next: NextFu
     const newAccessToken = jwt.sign({ id: decoded.id }, process.env.ACCESS_TOKEN_SECRET as string, {
       expiresIn: "15m",
     });
+    res.cookie("accessToken", newAccessToken, {
+      httpOnly: true,
+      secure: false,
+      sameSite: "lax",
+      maxAge: 15 * 60 * 1000, //15min
+    });
 
-    return res.json({ accessToken: newAccessToken });
+    return res.status(200).json({ message: "refreshed" });
   } catch (error) {
     if (error instanceof TokenExpiredError) throw { message: "Refresh token expired", statusCode: 401 };
     if (error instanceof JsonWebTokenError) throw { message: "Invalid refresh token", statusCode: 403 };
     next(error);
+  }
+};
+
+export const meController = async (req: Request, res: Response, next: NextFunction) => {
+  try {
+    const userId = req.user.id;
+
+    const user = await prisma.user.findUnique({
+      where: { id: userId },
+      select: { id: true, user_name: true, email: true, createdAt: true, isAdmin: true },
+    });
+
+    if (!user) throw { message: "User not found", statusCode: 404 };
+
+    return res.status(200).json({ userData: user });
+  } catch (err) {
+    next(err);
   }
 };

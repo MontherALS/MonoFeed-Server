@@ -8,7 +8,6 @@ export const createPostService = async (
 ) => {
   try {
     const categories = category ?? [];
-    // const totalPosts = await prisma.post.count()
 
     const post = await prisma.post.create({
       data: {
@@ -28,8 +27,7 @@ export const createPostService = async (
     });
     return post ?? null;
   } catch (err) {
-    console.error(err);
-    return null;
+    throw { message: "Error happend in service while trying to create post", statusCode: 500 };
   }
 };
 
